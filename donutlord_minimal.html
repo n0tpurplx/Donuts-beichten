@@ -52,111 +52,28 @@ textarea:focus{border-color:#68bce4}
     <div id="status" role="status"></div>
   </form>
 </div>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script>
-/*
-  1) Replace the placeholder values below with your Firebase web app config.
-  2) Create a Realtime Database and set its URL in databaseURL.
-*/
-const firebaseConfig = {
-  apiKey: "PASTE_API_KEY_HERE",
-  authDomain: "PASTE_PROJECT_ID_HERE.firebaseapp.com",
-  databaseURL: "PASTE_DATABASE_URL_HERE",
-  projectId: "PASTE_PROJECT_ID_HERE",
-  appId: "PASTE_APP_ID_HERE"
-};
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
 
-(() => {
-  const $ = id => document.getElementById(id);
-  const modal = $("modal");
-  let confessions = [];
-  let lastShown = "";
-  let db = null;
-  const ready = Object.values(firebaseConfig).every(v => v && !v.startsWith("PASTE_"));
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDTyJqnai0JXkov2AIdddCgvV0Hr_oNCns",
+    authDomain: "stream-und-co.firebaseapp.com",
+    projectId: "stream-und-co",
+    storageBucket: "stream-und-co.firebasestorage.app",
+    messagingSenderId: "787575122637",
+    appId: "1:787575122637:web:b9d6a2d68451bc87631784",
+    measurementId: "G-Z6VJFKMX2E"
+  };
 
-  function sayStatus(message, error = false) {
-    $("status").textContent = message;
-    $("status").style.color = error ? "#b13b3b" : "#527287";
-  }
-
-  if (ready) {
-    try {
-      firebase.initializeApp(firebaseConfig);
-      db = firebase.database();
-      db.ref("confessions").on("value", snapshot => {
-        const data = snapshot.val() || {};
-        confessions = Object.values(data).filter(x => typeof x === "string" && x.trim().length);
-      }, error => {
-        console.error("Firebase read failed:", error);
-        sayStatus("Verbindung fehlgeschlagen. Firebase-Regeln prüfen.", true);
-      });
-    } catch (error) {
-      console.error("Firebase initialization failed:", error);
-    }
-  } else {
-    console.warn("Firebase config is missing. Add your Firebase web app config before publishing.");
-  }
-
-  function nextConfession() {
-    if (!ready || !db) {
-      $("confession").textContent = "Firebase einrichten";
-      return;
-    }
-    if (!confessions.length) {
-      $("confession").textContent = "";
-      return;
-    }
-    let choices = confessions;
-    if (confessions.length > 1 && lastShown) choices = confessions.filter(x => x !== lastShown);
-    lastShown = choices[Math.floor(Math.random() * choices.length)];
-    $("confession").textContent = lastShown;
-  }
-
-  $("next").addEventListener("click", nextConfession);
-  $("cap").addEventListener("click", nextConfession);
-  $("addOpen").addEventListener("click", () => {
-    modal.classList.add("open");
-    $("input").focus();
-  });
-  $("close").addEventListener("click", () => modal.classList.remove("open"));
-  modal.addEventListener("click", e => {
-    if (e.target === modal) modal.classList.remove("open");
-  });
-  document.addEventListener("keydown", e => {
-    if (e.key === "Escape") modal.classList.remove("open");
-  });
-
-  $("form").addEventListener("submit", async e => {
-    e.preventDefault();
-    const value = $("input").value.trim();
-    if (!value) return;
-    if (!ready || !db) {
-      sayStatus("Erst die Firebase-Konfiguration eintragen.", true);
-      return;
-    }
-    if (value.length > 500) {
-      sayStatus("Maximal 500 Zeichen.", true);
-      return;
-    }
-    $("save").disabled = true;
-    sayStatus("Wird hinzugefügt …");
-    try {
-      await db.ref("confessions").push(value);
-      $("input").value = "";
-      sayStatus("Hinzugefügt!");
-      setTimeout(() => {
-        modal.classList.remove("open");
-        sayStatus("");
-      }, 500);
-    } catch (error) {
-      console.error("Could not add confession:", error);
-      sayStatus("Konnte nicht speichern. Firebase-Regeln prüfen.", true);
-    } finally {
-      $("save").disabled = false;
-    }
-  });
-})();
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
 </script>
 </body>
 </html>
