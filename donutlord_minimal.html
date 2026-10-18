@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#8ed8f5">
+<title>DonutLord Beichten</title>
+<style>
+:root{color-scheme:light;--blue:#6dc8ee;--deep:#23678f;--ink:#17283a;--paper:#fffefa}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;min-height:100dvh;overflow:hidden;font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;color:var(--ink);background:linear-gradient(135deg,#63d6e4 0%,#83c9f5 48%,#c8bcff 100%);display:grid;place-items:center}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;background-image:radial-gradient(circle,#fff 2px,transparent 3px);background-size:38px 38px}
+.donut{position:fixed;pointer-events:none;opacity:.2;font-size:clamp(34px,6vw,72px);filter:saturate(.75)}
+.d1{left:5%;top:12%;transform:rotate(-18deg)}.d2{right:6%;bottom:10%;transform:rotate(20deg)}.d3{left:12%;bottom:15%;font-size:35px}
+#addOpen{position:fixed;z-index:3;top:calc(13px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));width:35px;height:35px;border-radius:50%;border:1px solid #ffffffa8;background:#ffffff48;color:#204e6c;font-size:23px;font-weight:500;line-height:1;display:grid;place-items:center;cursor:pointer;opacity:.72;transition:opacity .15s,transform .15s}
+#addOpen:hover{opacity:1;transform:scale(1.06)}
+main{width:min(900px,calc(100% - 30px));position:relative;z-index:1}
+.card{min-height:clamp(280px,52vh,440px);display:grid;place-items:center;padding:clamp(24px,6vw,64px);background:var(--paper);border:2px solid #fff;border-radius:clamp(25px,5vw,48px);box-shadow:0 9px 0 #397fa04a,0 20px 45px #214c642e;text-align:center;position:relative}
+.card:before{content:"";position:absolute;inset:11px;border:2px dashed #d9eaf3;border-radius:inherit;pointer-events:none}
+#confession{position:relative;width:100%;font-size:clamp(1.5rem,4.3vw,2.8rem);font-weight:900;line-height:1.28;letter-spacing:-.04em;overflow-wrap:anywhere;white-space:pre-wrap}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
+button{font:inherit;cursor:pointer;touch-action:manipulation}
+.action{min-height:54px;border:0;border-radius:17px;padding:13px 20px;font-weight:900;font-size:1rem;transition:transform .12s,filter .12s}
+.action:active{transform:translateY(2px)}
+#cap{background:#ffe0a0;color:#67471a;box-shadow:0 5px 0 #e4b65d}
+#next{background:#246b99;color:white;box-shadow:0 5px 0 #174e72}
+.action:disabled{opacity:.5;cursor:not-allowed}
+#modal{position:fixed;inset:0;z-index:5;background:#132b3d80;display:none;place-items:center;padding:18px}
+#modal.open{display:grid}
+.dialog{width:min(440px,100%);background:#fffefa;border:2px solid #fff;border-radius:24px;padding:20px;box-shadow:0 18px 55px #102b4540}
+.dialogTop{display:flex;justify-content:flex-end;margin-bottom:10px}
+#close{width:34px;height:34px;border:0;border-radius:50%;background:#e9f6fc;color:#31566b;font-size:22px}
+textarea{display:block;width:100%;min-height:150px;resize:vertical;border:2px solid #d6e9f3;border-radius:15px;padding:13px;font:inherit;line-height:1.5;color:var(--ink);background:#f8fcff;outline:none}
+textarea:focus{border-color:#68bce4}
+#save{margin-top:12px;width:100%;background:#76cbed;color:#153c56;box-shadow:0 4px 0 #3d9fc7}
+#status{min-height:1.25em;margin:10px 2px 0;font-size:.82rem;color:#527287}
+@media(max-width:520px){main{width:calc(100% - 24px)}.card{min-height:48vh;padding:28px 22px}.controls{gap:12px;margin-top:18px}.action{padding:12px 8px;min-height:51px}.d1{left:2%;top:8%}.d2{right:2%;bottom:7%}}
+</style>
+</head>
+<body>
+<div class="donut d1" aria-hidden="true">🍩</div><div class="donut d2" aria-hidden="true">🍩</div><div class="donut d3" aria-hidden="true">🍩</div>
+<button id="addOpen" aria-label="Beichte hinzufügen" title="Beichte hinzufügen">+</button>
+<main>
+  <section class="card" aria-live="polite"><div id="confession"></div></section>
+  <div class="controls"><button class="action" id="cap">CAP!</button><button class="action" id="next">Weiter</button></div>
+</main>
+<div id="modal" role="dialog" aria-modal="true" aria-label="Beichte hinzufügen">
+  <form class="dialog" id="form">
+    <div class="dialogTop"><button id="close" type="button" aria-label="Schließen">×</button></div>
+    <textarea id="input" maxlength="500" placeholder="…" required></textarea>
+    <button class="action" id="save" type="submit">Hinzufügen</button>
+    <div id="status" role="status"></div>
+  </form>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/*
+  1) Replace the placeholder values below with your Firebase web app config.
+  2) Create a Realtime Database and set its URL in databaseURL.
+*/
+const firebaseConfig = {
+  apiKey: "PASTE_API_KEY_HERE",
+  authDomain: "PASTE_PROJECT_ID_HERE.firebaseapp.com",
+  databaseURL: "PASTE_DATABASE_URL_HERE",
+  projectId: "PASTE_PROJECT_ID_HERE",
+  appId: "PASTE_APP_ID_HERE"
+};
+
+(() => {
+  const $ = id => document.getElementById(id);
+  const modal = $("modal");
+  let confessions = [];
+  let lastShown = "";
+  let db = null;
+  const ready = Object.values(firebaseConfig).every(v => v && !v.startsWith("PASTE_"));
+
+  function sayStatus(message, error = false) {
+    $("status").textContent = message;
+    $("status").style.color = error ? "#b13b3b" : "#527287";
+  }
+
+  if (ready) {
+    try {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+      db.ref("confessions").on("value", snapshot => {
+        const data = snapshot.val() || {};
+        confessions = Object.values(data).filter(x => typeof x === "string" && x.trim().length);
+      }, error => {
+        console.error("Firebase read failed:", error);
+        sayStatus("Verbindung fehlgeschlagen. Firebase-Regeln prüfen.", true);
+      });
+    } catch (error) {
+      console.error("Firebase initialization failed:", error);
+    }
+  } else {
+    console.warn("Firebase config is missing. Add your Firebase web app config before publishing.");
+  }
+
+  function nextConfession() {
+    if (!ready || !db) {
+      $("confession").textContent = "Firebase einrichten";
+      return;
+    }
+    if (!confessions.length) {
+      $("confession").textContent = "";
+      return;
+    }
+    let choices = confessions;
+    if (confessions.length > 1 && lastShown) choices = confessions.filter(x => x !== lastShown);
+    lastShown = choices[Math.floor(Math.random() * choices.length)];
+    $("confession").textContent = lastShown;
+  }
+
+  $("next").addEventListener("click", nextConfession);
+  $("cap").addEventListener("click", nextConfession);
+  $("addOpen").addEventListener("click", () => {
+    modal.classList.add("open");
+    $("input").focus();
+  });
+  $("close").addEventListener("click", () => modal.classList.remove("open"));
+  modal.addEventListener("click", e => {
+    if (e.target === modal) modal.classList.remove("open");
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") modal.classList.remove("open");
+  });
+
+  $("form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const value = $("input").value.trim();
+    if (!value) return;
+    if (!ready || !db) {
+      sayStatus("Erst die Firebase-Konfiguration eintragen.", true);
+      return;
+    }
+    if (value.length > 500) {
+      sayStatus("Maximal 500 Zeichen.", true);
+      return;
+    }
+    $("save").disabled = true;
+    sayStatus("Wird hinzugefügt …");
+    try {
+      await db.ref("confessions").push(value);
+      $("input").value = "";
+      sayStatus("Hinzugefügt!");
+      setTimeout(() => {
+        modal.classList.remove("open");
+        sayStatus("");
+      }, 500);
+    } catch (error) {
+      console.error("Could not add confession:", error);
+      sayStatus("Konnte nicht speichern. Firebase-Regeln prüfen.", true);
+    } finally {
+      $("save").disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>
