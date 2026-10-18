@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="de">
 <head>
@@ -87,7 +86,7 @@ import {
 const firebaseConfig = {
   apiKey: "AIzaSyDTyJqnai0JXkov2AIdddCgvV0Hr_oNCns",
   authDomain: "stream-und-co.firebaseapp.com",
-  databaseURL: "YOUR_REALTIME_DATABASE_URL",
+  databaseURL: "https://stream-und-co-default-rtdb.firebaseio.com",
   projectId: "stream-und-co",
   appId: "1:787575122637:web:b9d6a2d68451bc87631784",
   storageBucket: "stream-und-co.firebasestorage.app",
@@ -96,9 +95,10 @@ const firebaseConfig = {
 
 const $ = id => document.getElementById(id);
 const modal = $("modal");
+
 let confessions = [];
 let lastShown = "";
-let db;
+let db = null;
 
 function sayStatus(message, error = false) {
   $("status").textContent = message;
@@ -119,10 +119,6 @@ function nextConfession() {
 }
 
 try {
-  if (firebaseConfig.databaseURL === "https://stream-und-co-default-rtdb.firebaseio.com") {
-    throw new Error("Bitte die echte Realtime Database URL eintragen.");
-  }
-
   const app = initializeApp(firebaseConfig);
   db = getDatabase(app);
 
