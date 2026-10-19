@@ -20,13 +20,14 @@ main{width:min(900px,calc(100% - 30px));position:relative;z-index:1}
 .card{min-height:clamp(280px,52vh,440px);display:grid;place-items:center;padding:clamp(24px,6vw,64px);background:var(--paper);border:2px solid #fff;border-radius:clamp(25px,5vw,48px);box-shadow:0 9px 0 #397fa04a,0 20px 45px #214c642e;text-align:center;position:relative}
 .card:before{content:"";position:absolute;inset:11px;border:2px dashed #d9eaf3;border-radius:inherit;pointer-events:none}
 #confession{position:relative;width:100%;font-size:clamp(1.5rem,4.3vw,2.8rem);font-weight:900;line-height:1.28;letter-spacing:-.04em;overflow-wrap:anywhere;white-space:pre-wrap}
-.controls{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
+.controls{display:grid;grid-template-columns:1fr;gap:18px;margin-top:22px}
 button{font:inherit;cursor:pointer;touch-action:manipulation}
-.action{min-height:54px;border:0;border-radius:17px;padding:13px 20px;font-weight:900;font-size:1rem;transition:transform .12s,filter .12s}
+.action{width:100%;min-height:60px;border:0;border-radius:17px;padding:14px 20px;font-weight:900;font-size:1.05rem;transition:transform .12s,filter .12s}
 .action:active{transform:translateY(2px)}
-#cap{background:#ffe0a0;color:#67471a;box-shadow:0 5px 0 #e4b65d}
 #next{background:#246b99;color:white;box-shadow:0 5px 0 #174e72}
+#start{background:#246b99;color:white;box-shadow:0 5px 0 #174e72}
 .action:disabled{opacity:.5;cursor:not-allowed}
+.hidden{display:none!important}
 #modal{position:fixed;inset:0;z-index:5;background:#132b3d80;display:none;place-items:center;padding:18px}
 #modal.open{display:grid}
 .dialog{width:min(440px,100%);background:#fffefa;border:2px solid #fff;border-radius:24px;padding:20px;box-shadow:0 18px 55px #102b4540}
@@ -34,13 +35,13 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
 #close{width:34px;height:34px;border:0;border-radius:50%;background:#e9f6fc;color:#31566b;font-size:22px}
 textarea{display:block;width:100%;min-height:150px;resize:vertical;border:2px solid #d6e9f3;border-radius:15px;padding:13px;font:inherit;line-height:1.5;color:var(--ink);background:#f8fcff;outline:none}
 textarea:focus{border-color:#68bce4}
-#save{margin-top:12px;width:100%;background:#76cbed;color:#153c56;box-shadow:0 4px 0 #3d9fc7}
+#save{margin-top:12px;background:#76cbed;color:#153c56;box-shadow:0 4px 0 #3d9fc7}
 #status{min-height:1.25em;margin:10px 2px 0;font-size:.82rem;color:#527287}
 @media(max-width:520px){
 main{width:calc(100% - 24px)}
 .card{min-height:48vh;padding:28px 22px}
 .controls{gap:12px;margin-top:18px}
-.action{padding:12px 8px;min-height:51px}
+.action{padding:12px 8px;min-height:56px}
 .d1{left:2%;top:8%}
 .d2{right:2%;bottom:7%}
 }
@@ -55,11 +56,15 @@ main{width:calc(100% - 24px)}
 
 <main>
   <section class="card" aria-live="polite">
-    <div id="confession">Beichten werden geladen …</div>
+    <div id="confession">Drück auf Start, um anzufangen.</div>
   </section>
-  <div class="controls">
-    <button class="action" id="cap">CAP!</button>
-    <button class="action" id="next">Weiter</button>
+
+  <div class="controls" id="startControls">
+    <button class="action" id="start">Start</button>
+  </div>
+
+  <div class="controls hidden" id="readingControls">
+    <button class="action" id="next" disabled>Weiter</button>
   </div>
 </main>
 
@@ -97,7 +102,9 @@ const $ = id => document.getElementById(id);
 const modal = $("modal");
 
 let confessions = [];
-let lastShown = "";
+let seen = new Set();
+let currentConfession = "";
+let started = false;
 let db = null;
 
 function sayStatus(message, error = false) {
@@ -105,18 +112,55 @@ function sayStatus(message, error = false) {
   $("status").style.color = error ? "#b13b3b" : "#527287";
 }
 
+function showStartScreen() {
+  started = false;
+  seen.clear();
+  currentConfession = "";
+
+  $("confession").textContent = "Drück auf Start, um anzufangen.";
+  $("startControls").classList.remove("hidden");
+  $("readingControls").classList.add("hidden");
+  $("start").disabled = false;
+}
+
 function nextConfession() {
-  if (!confessions.length) {
-    $("confession").textContent = "Noch keine Beichten vorhanden.";
+  if (!started) return;
+
+  const unseen = confessions.filter(item => !seen.has(item.id));
+
+  if (unseen.length === 0) {
+    $("confession").textContent = confessions.length
+      ? "Das waren alle Beichten!"
+      : "Noch keine Beichten vorhanden.";
+
+    $("next").disabled = true;
+    $("next").textContent = "Alle Beichten gesehen";
     return;
   }
 
-  let choices = confessions.filter(text => text !== lastShown);
-  if (!choices.length) choices = confessions;
+  const item = unseen[Math.floor(Math.random() * unseen.length)];
 
-  lastShown = choices[Math.floor(Math.random() * choices.length)];
-  $("confession").textContent = lastShown;
+  seen.add(item.id);
+  currentConfession = item.id;
+  $("confession").textContent = item.text;
+  $("next").disabled = false;
+  $("next").textContent = "Weiter";
 }
+
+function startReading() {
+  if (started) return;
+
+  started = true;
+  seen.clear();
+
+  $("startControls").classList.add("hidden");
+  $("readingControls").classList.remove("hidden");
+
+  nextConfession();
+}
+
+$("start").addEventListener("click", startReading);
+$("next").addEventListener("click", nextConfession);
 
 try {
   const app = initializeApp(firebaseConfig);
@@ -125,24 +169,45 @@ try {
   onValue(ref(db, "confessions"), snapshot => {
     const data = snapshot.val() || {};
 
-    confessions = Object.values(data).filter(
-      value => typeof value === "string" && value.trim().length > 0
-    );
+    confessions = Object.entries(data)
+      .filter(([, value]) =>
+        typeof value === "string" && value.trim().length > 0
+      )
+      .map(([id, value]) => ({
+        id,
+        text: value.trim()
+      }));
 
-    if (!lastShown || !confessions.includes(lastShown)) {
-      nextConfession();
+    if (started) {
+      if (currentConfession && !confessions.some(item => item.id === currentConfession)) {
+        currentConfession = "";
+      }
+
+      const unseen = confessions.filter(item => !seen.has(item.id));
+
+      if (!currentConfession || !confessions.some(item => item.id === currentConfession)) {
+        if (unseen.length) {
+          nextConfession();
+        } else {
+          $("confession").textContent = confessions.length
+            ? "Das waren alle Beichten!"
+            : "Noch keine Beichten vorhanden.";
+          $("next").disabled = true;
+          $("next").textContent = "Alle Beichten gesehen";
+        }
+      }
     }
   }, error => {
     console.error("Firebase read failed:", error);
-    $("confession").textContent = "Fehler beim Laden der Beichten.";
+
+    if (!started) {
+      $("confession").textContent = "Fehler beim Laden der Beichten.";
+    }
   });
 } catch (error) {
   console.error("Firebase setup failed:", error);
   $("confession").textContent = "Firebase einrichten";
 }
-
-$("next").addEventListener("click", nextConfession);
-$("cap").addEventListener("click", nextConfession);
 
 $("addOpen").addEventListener("click", () => {
   modal.classList.add("open");
